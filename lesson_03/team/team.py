@@ -35,6 +35,7 @@ TODO
 from datetime import datetime, timedelta
 import threading
 from common import *
+import queue
 
 # Include cse 351 common Python files
 from cse351 import *
@@ -54,6 +55,10 @@ def get_urls(film6, kind):
 
 def main():
     global call_count
+    NUM_OF_WORKERS = 90
+
+    q = queue.Queue()
+    types = ['characters', 'planets', 'starships', 'vehicles', 'species']
 
     log = Log(show_terminal=True)
     log.start_timer('Starting to retrieve data from the server')
@@ -62,15 +67,52 @@ def main():
     call_count += 1
     print_dict(film6)
 
+    url_workers = []
+    name_workers = []
+    for type in types:
+        url_worker = threading.Thread(target=url_producer, args=(q, film6, [type], int(NUM_OF_WORKERS/5)))
+        url_workers.append(url_worker)
+
+    for w in range(NUM_OF_WORKERS):
+        name_worker = threading.Thread(target=url_consumer, args=(q,))
+        name_workers.append(name_worker)
+
+    for u in url_workers:
+        u.start()
+    for n in name_workers:
+        n.start()
+
+    for u in url_workers:
+        u.join()
+    for n in name_workers:
+        n.join()
+   
     # Retrieve people
-    get_urls(film6, 'characters')
-    get_urls(film6, 'planets')
-    get_urls(film6, 'starships')
-    get_urls(film6, 'vehicles')
-    get_urls(film6, 'species')
+    # get_urls(film6, 'planets')
+    # get_urls(film6, 'planets')
+    # get_urls(film6, 'starships')
+    # get_urls(film6, 'vehicles')
+    # get_urls(film6, 'species')
 
     log.stop_timer('Total Time To complete')
     log.write(f'There were {call_count} calls to the server')
+
+
+def url_producer(queue, dict, types, num_of_consumers):
+    for type in types:
+        for url in dict[type]:
+            queue.put(url)
+    for n in range(num_of_consumers):
+        queue.put(None)
+
+def url_consumer(queue):
+    while True:
+        url = queue.get()
+        if url == None:
+            break
+        else:
+            item = get_data_from_server(url)
+            print(item['name'])
 
 if __name__ == "__main__":
     main()
