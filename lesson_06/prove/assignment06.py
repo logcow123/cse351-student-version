@@ -57,50 +57,82 @@ def task_detect_edges(image, threshold1, threshold2):
     return cv2.Canny(image, threshold1, threshold2)
 
 # ---------------------------------------------------------------------------
-def process_from_queue(input_queue, processing_function, **kwargs):
+# def process_from_queue(input_queue, processing_function, **kwargs):
 
-    output_folder = kwargs.get(output_folder)
-    processing_args = kwargs.get(processing_args)
-    output_queue = kwargs.get(output_queue)
-    still_working = True
-    while still_working:
-        img_tup = input_queue.get()
-        if (img_tup != None):
-            img = img_tup[0]
-            filename = img_tup[1]
-            if processing_args:
-                processed_img = processing_function(img, *processing_args)
-            else:
-                processed_img = processing_function(img)
-            if output_queue:
-                output_queue.put((processed_img, filename))
-            else:
-                create_folder_if_not_exists(output_folder)
-                output_image_path = os.path.join(output_folder, filename)
-                cv2.imwrite(output_folder, processed_img)
-        else:
-            if output_queue:
-                output_queue.put(None)
-            still_working = False
+#     output_folder = kwargs.get(output_folder)
+#     processing_args = kwargs.get(processing_args)
+#     output_queue = kwargs.get(output_queue)
+#     still_working = True
+#     while still_working:
+#         img_tup = input_queue.get()
+#         if (img_tup != None):
+#             img = img_tup[0]
+#             filename = img_tup[1]
+#             if processing_args:
+#                 processed_img = processing_function(img, *processing_args)
+#             else:
+#                 processed_img = processing_function(img)
+#             if output_queue:
+#                 output_queue.put((processed_img, filename))
+#             else:
+#                 create_folder_if_not_exists(output_folder)
+#                 output_image_path = os.path.join(output_folder, filename)
+#                 cv2.imwrite(output_folder, processed_img)
+#         else:
+#             if output_queue:
+#                 output_queue.put(None)
+#             still_working = False
 
-def proccess_image_from_folder(input_folder, output_queue, processing_function, **kwargs):
+# def proccess_image_from_folder(input_folder, output_queue, processing_function, **kwargs):
 
-    load_args= kwargs.get(load_args)
-    processing_args = kwargs.get(processing_args)
+#     load_args= kwargs.get(load_args)
+#     processing_args = kwargs.get(processing_args)
+#     processed_count = 0
+#     for filename in os.listdir(input_folder):
+#         file_ext = os.path.splitext(filename)[1].lower()
+#         if file_ext not in ALLOWED_EXTENSIONS:
+#             continue
+
+#         input_image_path = os.path.join(input_folder, filename)
+
+#         try:
+#             # Read the image
+#             if load_args is not None:
+#                 img = cv2.imread(input_image_path, load_args)
+#             else:
+#                 img = cv2.imread(input_image_path)
+
+#             if img is None:
+#                 print(f"Warning: Could not read image '{input_image_path}'. Skipping.")
+#                 continue
+
+#             # Apply the processing function
+#             if processing_args:
+#                 processed_img = processing_function(img, *processing_args)
+#             else:
+#                 processed_img = processing_function(img)
+
+#             # Save the processed image
+#             output_queue.put((processed_img, filename))
+
+#             processed_count += 1
+#         except Exception as e:
+#             print(f"Error processing file '{input_image_path}': {e}")
+
+#     output_queue.put(None)
+            
+def smooth_process(folder, out_queue, processing_function, processing_args):
     processed_count = 0
-    for filename in os.listdir(input_folder):
+    for filename in os.listdir(folder):
         file_ext = os.path.splitext(filename)[1].lower()
         if file_ext not in ALLOWED_EXTENSIONS:
             continue
 
-        input_image_path = os.path.join(input_folder, filename)
+        input_image_path = os.path.join(folder, filename)
 
         try:
             # Read the image
-            if load_args is not None:
-                img = cv2.imread(input_image_path, load_args)
-            else:
-                img = cv2.imread(input_image_path)
+            img = cv2.imread(input_image_path)
 
             if img is None:
                 print(f"Warning: Could not read image '{input_image_path}'. Skipping.")
@@ -113,15 +145,59 @@ def proccess_image_from_folder(input_folder, output_queue, processing_function, 
                 processed_img = processing_function(img)
 
             # Save the processed image
-            output_queue.put((processed_img, filename))
+            out_queue.put((processed_img, filename))
 
             processed_count += 1
         except Exception as e:
             print(f"Error processing file '{input_image_path}': {e}")
+    out_queue.put(None)
 
-    output_queue.put(None)
+def grayscale_process(in_queue, out_queue, process_func):
+    still_working = True
+    while still_working:
+        try:
+            img_tup = in_queue.get()
+            if (img_tup == None):
+                still_working = False
+                break
+
+            img = img_tup[0]
+            filename = img_tup[1]
+
+            if img is None:
+                print(f"Warning: Could not read image  Skipping.")
+                continue
             
-    
+            processed_img = process_func(img)
+
+            out_queue.put((processed_img, filename))
+        except Exception as e:
+            print("ERROR OCCURED")
+    out_queue.put(None)
+
+def edge_process(in_queue, output_folder, process_func, process_args):
+    still_working = True
+    while still_working:
+        try:
+            img_tup = in_queue.get()
+            if (img_tup == None):
+                still_working = False
+                break
+
+            img = img_tup[0]
+            filename = img_tup[1]
+
+            if img is None:
+                print(f"Warning: Could not read image  Skipping.")
+                continue
+            
+            processed_img = process_func(img, *process_args)
+
+            create_folder_if_not_exists(output_folder)
+            output_image_path = os.path.join(output_folder, filename)
+            cv2.imwrite(output_image_path, processed_img)
+        except Exception as e:
+            print("ERROR OCCURED")
 
 # ---------------------------------------------------------------------------
 def process_images_in_folder(input_folder,              # input folder with images
@@ -178,17 +254,17 @@ def run_image_processing_pipeline():
     queue_gray = mp.Queue()
     # - create barriers
     # - create the three processes groups
-    smooth_process = mp.Process(target=proccess_image_from_folder, args=(INPUT_FOLDER, queue_smooth, task_smooth_image), kwargs=({'processing_args': GAUSSIAN_BLUR_KERNEL_SIZE}))
-    gray_process = mp.Process(target=process_from_queue, args=(queue_smooth, task_convert_to_grayscale), kwargs=({'output_queue' : queue_gray}))
-    edge_process = mp.Process(target=process_from_queue, args=(queue_gray, task_detect_edges), kwargs=({'output_folder': 'step3_edges', 'processing_args': (CANNY_THRESHOLD1, CANNY_THRESHOLD2)}))
+    process_smooth = mp.Process(target=smooth_process, args=(INPUT_FOLDER, queue_smooth, task_smooth_image, [GAUSSIAN_BLUR_KERNEL_SIZE]))
+    process_gray = mp.Process(target=grayscale_process, args=(queue_smooth, queue_gray, task_convert_to_grayscale))
+    process_edge = mp.Process(target=edge_process, args=(queue_gray, 'step3_edges', task_detect_edges, (CANNY_THRESHOLD1, CANNY_THRESHOLD2)))
+    
+    process_smooth.start()
+    process_gray.start()
+    process_edge.start()
 
-    smooth_process.start()
-    gray_process.start()
-    edge_process.start()
-
-    smooth_process.join()
-    gray_process.join()
-    edge_process.join()
+    process_smooth.join()
+    process_gray.join()
+    process_edge.join()
     # - you are free to change anything in the program as long as you
     #   do all requirements.
 
