@@ -39,24 +39,32 @@ def main():
     xaxis_cpus = []
     yaxis_times = []
 
-    start_time = time.time()
+    for cpus in range(1, mp.cpu_count() +1 ):
 
-    start = 10000000000
-    range_count = 100000
-    numbers_processed = 0
-    for i in range(start, start + range_count):
-        numbers_processed += 1
-        if is_prime(i):
-            prime_count += 1
-            print(i, end=', ', flush=True)
-    print(flush=True)
+        start_time = time.time()
 
-    end_time = time.time()
-    elapsed_time = end_time - start_time
+        start = 10000000000
+        range_count = 100000
+        numbers_processed = 0
 
-    # create plot of results and also save it to a PNG file
-    plt.plot(xaxis_cpus, yaxis_times)
-    
+        with mp.Pool(2) as pool:
+            pool.map(is_prime, range(start, start + range_count))
+
+
+        # for i in range(start, start + range_count):
+        #     numbers_processed += 1
+        #     if is_prime(i):
+        #         prime_count += 1
+        #         print(i, end=', ', flush=True)
+        # print(flush=True)
+
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        print(f"CPUS: {cpus}, \ttime: {elapsed_time}")
+
+        # create plot of results and also save it to a PNG file
+        plt.plot(xaxis_cpus, yaxis_times)
+        
     plt.title('Time VS CPUs')
     plt.xlabel('CPU Cores')
     plt.ylabel('Seconds')
