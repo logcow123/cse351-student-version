@@ -66,11 +66,52 @@ import threading
 PHILOSOPHERS = 5
 MAX_MEALS_EATEN = PHILOSOPHERS * 5 # NOTE: Total meals to be eaten, not per philosopher!
 
+def philospher_algrm(forks, id, meals_per_phil):
+    meals = 0
+    left_fork = forks[id]
+    right_fork = forks[(id+1) % PHILOSOPHERS]
+    left_acq = False
+    right_acq = False
+    while meals < 5:
+      left_acq = left_fork.acquire(blocking=False)
+      right_acq = right_fork.acquire(blocking=False)
+
+      if (left_acq and right_acq):
+          print(f"Philospher: {id} ATE")
+          meals += 1
+          meals_per_phil[id] = meals
+          left_fork.release()
+          right_fork.release()
+      else:
+          drop_fork = random.randint(0,1)
+          if drop_fork == 1:
+              if left_acq:
+                left_fork.release()
+              elif right_acq:
+                right_fork.release()
+    print(f"Philospher: {id} FINISHED")
+    
+
 def main():
     # TODO - Create the forks.
     # TODO - Create PHILOSOPHERS philosophers.
+    forks = []
+    philosophers = []
+    meals_per_philospher = {}
+    for i in range(PHILOSOPHERS):
+        fork = threading.Lock()
+        philosopher = threading.Thread(target=philospher_algrm, args=(forks, i, meals_per_philospher))
+        forks.append(fork)
+        philosophers.append(philosopher)
+
     # TODO - Start them eating and thinking.
+    for p in philosophers:
+        p.start()
+    for p in philosophers:
+        p.join()
     # TODO - Display how many times each philosopher ate.
+    for i in range(philosophers):
+        print(f"Philospher {i} ate: {meals_per_philospher[i]}")
     pass
 
 

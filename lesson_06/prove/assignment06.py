@@ -272,10 +272,10 @@ def run_image_processing_pipeline():
     # process_images_in_folder(INPUT_FOLDER, STEP1_OUTPUT_FOLDER, task_smooth_image,
     #                          processing_args=(GAUSSIAN_BLUR_KERNEL_SIZE,))
 
-    # # --- Step 2: Convert to Grayscale ---
+    # # # --- Step 2: Convert to Grayscale ---
     # process_images_in_folder(STEP1_OUTPUT_FOLDER, STEP2_OUTPUT_FOLDER, task_convert_to_grayscale)
 
-    # # --- Step 3: Detect Edges ---
+    # # # --- Step 3: Detect Edges ---
     # process_images_in_folder(STEP2_OUTPUT_FOLDER, STEP3_OUTPUT_FOLDER, task_detect_edges,
     #                          load_args=cv2.IMREAD_GRAYSCALE,        
     #                          processing_args=(CANNY_THRESHOLD1, CANNY_THRESHOLD2))

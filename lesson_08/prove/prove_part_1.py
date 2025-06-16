@@ -2,7 +2,7 @@
 Course: CSE 251 
 Assignment: 08 Prove Part 1
 File:   prove_part_1.py
-Author: <Add name here>
+Author: Logan Cowley
 
 Purpose: Part 1 of assignment 8, finding the path to the end of a maze using recursion.
 
@@ -30,14 +30,42 @@ speed = SLOW_SPEED
 
 # TODO: Add any functions needed here.
 
+def solve_maze(maze, pos):
+    if maze.can_move_here(pos[0], pos[1]):
+        maze.move(pos[0], pos[1], COLOR)
+    moves = maze.get_possible_moves(pos[0], pos[1])
+
+    if maze.at_end(pos[0], pos[1]):
+        return (True, [pos])
+    
+    if len(moves) == 0:
+        maze.restore(pos[0], pos[1])
+        return (False, pos)
+
+    for move in moves:
+        path = solve_maze(maze, move)
+        if path[0]:
+            true_path = path[1]
+            true_path.append(pos)
+            return (True, true_path)
+    
+    maze.restore(pos[0], pos[1])
+    return (False, pos)
+
+
+
 def solve_path(maze):
     """ Solve the maze and return the path found between the start and end positions.  
         The path is a list of positions, (x, y) """
     path = []
     # TODO: Solve the maze recursively while tracking the correct path.
+    start_pos = maze.get_start_pos()
+    final_path = solve_maze(maze, start_pos)
+    path = final_path[1]
 
+    
     # Hint: You can create an inner function to do the recursion
-
+    
     return path
 
 

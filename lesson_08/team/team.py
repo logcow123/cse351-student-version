@@ -68,16 +68,86 @@ Suggestions and team Discussion:
 
 import time
 import threading
+import queue
 
 PHILOSOPHERS = 5
 MAX_MEALS_EATEN = PHILOSOPHERS * 5 # NOTE: Total meals to be eaten, not per philosopher!
 
 # TODO - Create the Waiter class.
+class Waiter(threading.Thread):
+    def __init__(self, philsopher_queue, individual_queues):
+        super().__init__()
+        self.philsopher_queue = philsopher_queue
+        self.individual_queues = individual_queues
 
+    def run(self):
+        meals = 0
+        evens = True
+        while meals < MAX_MEALS_EATEN:
+            accepted_ids = []
+            if evens:
+                accepted_ids = [2,4]
+                evens = False
+            else:
+                accepted_ids = [1,3,5]
+                evens = True
+            while len(accepted_ids) != 0:
+                id = self.philsopher_queue.get()
+                if id in accepted_ids:
+                    print(f"WATIER ACCEPTED {id}")
+                    self.individual_queues[id-1].put(True)
+                    accepted_ids.remove(id)
+                    meals += 1
+                else:
+                    self.individual_queues[id-1].put(False)
+                    print(f"WATIER DENIED {id}")
+
+
+def Philospher(id, lock_list, philsopher_queue, self_queue):
+    lockleft = lock_list[id-1]
+    lockRight = lock_list[(id) % PHILOSOPHERS]
+    meals_eaten = 0
+    while meals_eaten < 5:
+      philsopher_queue.put(id)
+      can_eat = self_queue.get()
+      if can_eat:
+          print(f"{id}: EATING")
+          lockleft.acquire()
+          lockRight.acquire()
+          time.sleep(1)
+          lockleft.release()
+          lockRight.release()
+          meals_eaten += 1
+      else:
+          print(f"{id}: THINKING")
+          time.sleep(1)
+    return meals_eaten
 def main():
     # TODO - Get an instance of the Waiter.
     # TODO - Create the forks???
+    forks = []
+    philosphers = []
+    individual_queues = []
+    philospher_queue = queue.Queue()
+    for i in range(PHILOSOPHERS):
+        fork = threading.Lock()
+        individual_queue = queue.Queue()
+        man = threading.Thread(target=Philospher, args=(i+1, forks, philospher_queue, individual_queue))
+        forks.append(fork)
+        philosphers.append(man)
+        individual_queues.append(individual_queue)
     # TODO - Create PHILOSOPHERS philosophers.
+    waiter = Waiter(philospher_queue, individual_queues)
+
+    waiter.start()
+
+    for phil in philosphers:
+        phil.start()
+
+    for phil in philosphers:
+        phil.join()
+    
+    waiter.join()
     # TODO - Start them eating and thinking.
     # TODO - Display how many times each philosopher ate.
     pass
