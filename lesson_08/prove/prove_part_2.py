@@ -99,9 +99,8 @@ def solve_maze(maze, pos, color):
     
     start_threads = False
     threads = []
-    
+    lock = threading.Lock()
     for move in moves:
-        lock = threading.Lock()
         if start_threads:
             thread = threading.Thread(target=solve_maze, args=(maze, move, get_color()))
             threads.append(thread)
@@ -111,7 +110,6 @@ def solve_maze(maze, pos, color):
         else:
             solve_maze(maze, move, color)
             start_threads = True
-        
 
     for t in threads:
         t.join()
